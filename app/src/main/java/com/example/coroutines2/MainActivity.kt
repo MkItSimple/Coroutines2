@@ -13,19 +13,23 @@ import kotlinx.coroutines.withContext
 import kotlin.math.log
 
 class MainActivity : AppCompatActivity() {
-
-    private  val RESULT_1 = "Result #1"
-    private  val RESULT_2 = "Result #2"
-
+    
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        button.setOnClickListener {
-
-            // IO, Main, Default
+        button.setOnClickListener {setNewText("Click")
             CoroutineScope(IO).launch {
                 fakeApiRequest()
+            }
+        }
+    }
+
+    private suspend fun fakeApiRequest(){
+        withContext(IO){
+            val job = launch {
+                val result1 = getResult1FromApi()
+                println("debug: result#1: ${result1}")
             }
         }
     }
@@ -41,29 +45,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun fakeApiRequest(){
-        val result1 = getResult1FromApi()
-        println("debug: $result1")
-        setTextOnMainThread(result1)
-
-        val result2 = getResult2FromApi()
-        println("debug: $result2")
-        setTextOnMainThread(result2)
-    }
-
     private suspend fun getResult1FromApi(): String{
-        logThread("getResult1FromApi")
         delay(1000)
-        return RESULT_1
+        return "Result1"
     }
 
     private suspend fun getResult2FromApi(): String{
-        logThread("getResult2FromApi")
         delay(1000)
-        return RESULT_2
-    }
-
-    private fun logThread(methodName: String) {
-        println("debug: ${methodName}: ${Thread.currentThread().name}")
+        return "Result2"
     }
 }
