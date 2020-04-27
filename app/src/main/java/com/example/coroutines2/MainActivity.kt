@@ -4,21 +4,21 @@ import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.widget.Toast
 import kotlinx.android.synthetic.main.activity_main.*
-import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 import kotlin.math.log
 
 class MainActivity : AppCompatActivity() {
-    
+
+    val JOB_TIMEOUT = 2000L
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        button.setOnClickListener {setNewText("Click")
+        button.setOnClickListener {
+            setNewText("Click")
             CoroutineScope(IO).launch {
                 fakeApiRequest()
             }
@@ -27,10 +27,23 @@ class MainActivity : AppCompatActivity() {
 
     private suspend fun fakeApiRequest(){
         withContext(IO){
-            val job = launch {
+            val job = withTimeoutOrNull(JOB_TIMEOUT){
                 val result1 = getResult1FromApi()
-                println("debug: result#1: ${result1}")
+                setTextOnMainThread("Got $result1")
+
+                val result2 = getResult2FromApi()
+                setTextOnMainThread("Got $result2")
             }
+
+            if (job == null) {
+                val cancelMessage = "Cancelling job... Job took longer than $JOB_TIMEOUT ms"
+                println("debug: $cancelMessage")
+                setTextOnMainThread(cancelMessage)
+            }
+
+            //val job2 = launch {  }
+            //job2.join()
+            //job2.cancel()
         }
     }
 
