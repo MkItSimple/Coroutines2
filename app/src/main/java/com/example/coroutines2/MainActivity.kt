@@ -12,6 +12,8 @@ import kotlin.math.log
 
 class MainActivity : AppCompatActivity() {
 
+    // Sample commit 2
+
     private  val RESULT_1 = "Result #1"
 
     override fun onCreate(savedInstanceState: Bundle?) {
