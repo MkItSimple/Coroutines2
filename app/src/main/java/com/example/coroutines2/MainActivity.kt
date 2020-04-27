@@ -11,21 +11,44 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.log
+import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity() {
 
-    private  val RESULT_1 = "Result #1"
-    private  val RESULT_2 = "Result #2"
+    private  val RESULT_1 = "Result#1"
+    private  val RESULT_2 = "Result#2"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
         button.setOnClickListener {
+            setNewText("Clicked!")
 
-            // IO, Main, Default
-            CoroutineScope(IO).launch {
-                fakeApiRequest()
+            fakeApiRequest()
+        }
+    }
+
+    private fun fakeApiRequest() {
+        // job1 and job2 will run  at the same time
+        CoroutineScope(IO).launch {
+            val job1 = launch {
+                val time1 = measureTimeMillis {
+                    println("debug: launching job1 in thread: ${Thread.currentThread().name}")
+                    val result1 = getResult1FromApi()
+                    setTextOnMainThread("Got $result1")
+                }
+                println("debug: completed job1 in $time1 ms.")
+            }
+            //job1.jion() . . but if we put this here job2 will wait for job1 first to finish
+
+            val job2 = launch {
+                val time2 = measureTimeMillis {
+                    println("debug: launching job2 in thread: ${Thread.currentThread().name}")
+                    val result2 = getResult2FromApi()
+                    setTextOnMainThread("Got $result2")
+                }
+                println("debug: completed job2 in $time2 ms.")
             }
         }
     }
@@ -41,29 +64,13 @@ class MainActivity : AppCompatActivity() {
         }
     }
 
-    private suspend fun fakeApiRequest(){
-        val result1 = getResult1FromApi()
-        println("debug: $result1")
-        setTextOnMainThread(result1)
-
-        val result2 = getResult2FromApi()
-        println("debug: $result2")
-        setTextOnMainThread(result2)
-    }
-
     private suspend fun getResult1FromApi(): String{
-        logThread("getResult1FromApi")
         delay(1000)
         return RESULT_1
     }
 
     private suspend fun getResult2FromApi(): String{
-        logThread("getResult2FromApi")
-        delay(1000)
+        delay(1700)
         return RESULT_2
-    }
-
-    private fun logThread(methodName: String) {
-        println("debug: ${methodName}: ${Thread.currentThread().name}")
     }
 }
