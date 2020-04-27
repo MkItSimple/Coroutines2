@@ -1,70 +1,90 @@
 package com.example.coroutines2
 
-import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
+import android.widget.ProgressBar
 import android.widget.Toast
+import androidx.appcompat.app.AppCompatActivity
 import kotlinx.android.synthetic.main.activity_main.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.Dispatchers.IO
 import kotlinx.coroutines.Dispatchers.Main
-import kotlin.math.log
-import kotlin.system.measureTimeMillis
 
 class MainActivity : AppCompatActivity() {
 
-    private  val RESULT_1 = "Result#1"
-    private  val RESULT_2 = "Result#2"
+    private val TAG: String = "AppDebug"
+
+    private val  PROGRESS_MAX = 100
+    private val  PROGRESS_START = 0
+    private val  JOB_TIME = 4000
+    private lateinit var job: CompletableJob
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main)
 
-        button.setOnClickListener {
-            setNewText("Clicked!")
-
-            fakeApiRequest()
-        }
-    }
-
-    private fun fakeApiRequest() {
-
-        CoroutineScope(IO).launch {
-            val executionTime = measureTimeMillis {
-                val result1: Deferred<String> = async {
-                    println("debug: launching job1: ${Thread.currentThread().name}")
-                    getResult1FromApi()
-                }
-
-                val result2: Deferred<String> = async {
-                    println("debug: launching job2: ${Thread.currentThread().name}")
-                    getResult2FromApi()
-                }
-
-                setTextOnMainThread("Got ${result1.await()}")
-                setTextOnMainThread("Got ${result2.await()}")
+        job_button.setOnClickListener {
+            if(!::job.isInitialized){
+                initjob()
             }
-            println("debug: total time elapsed: ${executionTime}")
+            job_progress_bar.startJobOrCancel(job)
         }
     }
 
-    private fun setNewText(input: String){
-        val newText = text.text.toString() + "\n$input"
-        text.text = newText
+    fun resetjob(){
+        if(job.isActive || job.isCompleted){
+            job.cancel(CancellationException("Resetting job"))
+        }
+        initjob()
     }
 
-    private suspend fun setTextOnMainThread(input: String){
-        withContext(Main){
-            setNewText(input)
+    fun initjob(){
+        job_button.setText("Start Job #1")
+        job_complete_text.setText("")
+        job = Job()
+        job.invokeOnCompletion {
+            it?.message.let{
+                var msg = it
+                if(msg.isNullOrBlank()){
+                    msg = "Unknown cancellation error."
+                }
+                println("${job} was cancelled. Reason: $msg")
+                showToast(msg)
+            }
+        }
+        job_progress_bar.max = PROGRESS_MAX
+        job_progress_bar.progress = PROGRESS_START
+    }
+
+    fun ProgressBar.startJobOrCancel(job: Job){
+        if(this.progress > 0){
+            Log.d(TAG, "${job} is already active. Cancelling...")
+            resetjob()
+        }
+        else{
+            job_button.setText("Cancel Job #1")
+            CoroutineScope(IO + job).launch{
+                Log.d(TAG, "coroutine ${this} is activated with job ${job}.")
+
+                for(i in PROGRESS_START..PROGRESS_MAX){
+                    delay((JOB_TIME / PROGRESS_MAX).toLong())
+                    this@startJobOrCancel.progress = i
+                }
+                updateJobCompleteTextView("Job is complete!")
+            }
         }
     }
 
-    private suspend fun getResult1FromApi(): String{
-        delay(1000)
-        return RESULT_1
+    private fun updateJobCompleteTextView(text: String){
+        GlobalScope.launch (Main){
+            job_complete_text.setText(text)
+        }
     }
 
-    private suspend fun getResult2FromApi(): String{
-        delay(1700)
-        return RESULT_2
+    private fun showToast(text: String){
+        GlobalScope.launch (Main){
+            Toast.makeText(this@MainActivity, text, Toast.LENGTH_SHORT).show()
+        }
     }
+
 }
