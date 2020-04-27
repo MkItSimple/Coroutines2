@@ -30,8 +30,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun fakeApiRequest() {
+
+        val startTime = System.currentTimeMillis()
+
         // job1 and job2 will run  at the same time
-        CoroutineScope(IO).launch {
+        val parentJob = CoroutineScope(IO).launch {
             val job1 = launch {
                 val time1 = measureTimeMillis {
                     println("debug: launching job1 in thread: ${Thread.currentThread().name}")
@@ -50,6 +53,9 @@ class MainActivity : AppCompatActivity() {
                 }
                 println("debug: completed job2 in $time2 ms.")
             }
+        }
+        parentJob.invokeOnCompletion {
+            println("debug: total elapsed time: ${System.currentTimeMillis() - startTime}")
         }
     }
 
